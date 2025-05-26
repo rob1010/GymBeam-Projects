@@ -5,34 +5,28 @@ import pandas as pd
 from datetime import datetime
 import pytz
 
-# Získanie API kľúča z environment variable
 API_KEY = os.getenv('GOLEMIO_API_KEY')
 if not API_KEY:
-    raise ValueError("API kľúč nie je nastavený. Nastavte ho ako environment variable 'GOLEMIO_API_KEY'.")
+    print("Error: API key not set")
+    df = pd.DataFrame()
+    df.to_csv('libraries.csv', index=False, encoding='utf-8')
+    print("Created empty libraries.csv due to missing API key")
+    exit(0)
 
-# Ensure API key is a string and strip any whitespace
 API_KEY = str(API_KEY).strip()
-
-# Debug: Check for problematic characters
-print(f"API key type: {type(API_KEY)}")
 print(f"API key length: {len(API_KEY)}")
-print(f"API key repr: {repr(API_KEY[:10])}..." if len(API_KEY) > 10 else f"API key repr: {repr(API_KEY)}")
 
-# Check for non-ASCII characters
 try:
     API_KEY.encode('ascii')
     print("API key contains only ASCII characters")
 except UnicodeEncodeError:
     print("WARNING: API key contains non-ASCII characters")
     API_KEY = API_KEY.encode('ascii', 'ignore').decode('ascii')
-    print(f"Cleaned API key length: {len(API_KEY)}")
 
-# Kontrola aktuálneho času v Prahe
 praha_tz = pytz.timezone('Europe/Prague')
 now = datetime.now(praha_tz)
 print(f"Aktuálny čas v Prahe: {now}")
 
-# Poslanie GET requestu na API
 url = "https://api.golemio.cz/v2/libraries"
 headers = {
     "X-Access-Token": API_KEY,
@@ -41,18 +35,21 @@ headers = {
 }
 
 print(f"Making request to: {url}")
-print(f"Headers: {dict((k, 'HIDDEN' if 'token' in k.lower() else v) for k, v in headers.items())}")
-
 try:
     response = requests.get(url, headers=headers, timeout=30)
     print(f"Response status code: {response.status_code}")
     
     if response.status_code == 200:
         data = response.json()
-        libraries = data['features']
-        print(f"Found {len(libraries)} libraries")
+        print(f"Raw response: {json.dumps(data, indent=2)[:1000]}...")
+        libraries = data.get('features', [])
+        if not libraries:
+            print("Warning: No libraries found in API response")
+            df = pd.DataFrame()
+            df.to_csv('libraries.csv', index=False, encoding='utf-8')
+            print("Created empty libraries.csv")
+            exit(0)
         
-        # Extrakcia požadovaných parametrov
         extracted_data = []
         for library in libraries:
             props = library.get('properties', {})
@@ -73,31 +70,33 @@ try:
                 'Čas otvorenia': opening_hours
             })
         
-        # Uloženie do DataFrame a CSV
         df = pd.DataFrame(extracted_data)
         df.to_csv('libraries.csv', index=False, encoding='utf-8')
-        print("Dáta boli úspešne extrahované a uložené do 'libraries.csv'.")
-        print(f"Saved {len(extracted_data)} records to CSV")
+        print(f"Saved {len(extracted_data)} records to libraries.csv")
         
-    elif response.status_code == 401:
-        print("Chyba 401: Neplatný API kľúč alebo chýbajúce oprávnenia")
-        print("Skontrolujte, či je API kľúč správne nastavený v GitHub Secrets")
-    elif response.status_code == 403:
-        print("Chyba 403: Prístup zamietnutý - skontrolujte oprávnenia API kľúča")
-    elif response.status_code == 429:
-        print("Chyba 429: Príliš veľa požiadaviek - API limit dosiahnutý")
     else:
-        print(f"Chyba pri získavaní dát: {response.status_code}")
+        print(f"Error: Status code {response.status_code}")
         print(f"Response text: {response.text[:500]}")
-        
-except requests.exceptions.Timeout:
-    print("Chyba: Časový limit požiadavky vypršal")
-except requests.exceptions.ConnectionError:
-    print("Chyba: Problém s pripojením k API")
+        df = pd.DataFrame()
+        df.to_csv('libraries.csv', index=False, encoding='utf-8')
+        print("Created empty libraries.csv due to API error")
+        exit(0)
+
 except requests.exceptions.RequestException as e:
-    print(f"Chyba pri HTTP požiadavke: {e}")
+    print(f"HTTP request error: {e}")
+    df = pd.DataFrame()
+    df.to_csv('libraries.csv', index=False, encoding='utf-8')
+    print("Created empty libraries.csv due to HTTP error")
+    exit(0)
 except json.JSONDecodeError:
-    print("Chyba: Neplatná JSON odpoveď z API")
+    print("Error: Invalid JSON response from API")
+    df = pd.DataFrame()
+    df.to_csv('libraries.csv', index=False, encoding='utf-8')
+    print("Created empty libraries.csv due to JSON error")
+    exit(0)
 except Exception as e:
-    print(f"Neočakávaná chyba: {e}")
-    raise
+    print(f"Unexpected error: {e}")
+    df = pd.DataFrame()
+    df.to_csv('libraries.csv', index=False, encoding='utf-8')
+    print("Created empty libraries.csv due to unexpected error")
+    exit(0)

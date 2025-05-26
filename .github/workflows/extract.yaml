@@ -28,7 +28,9 @@ jobs:
       - name: Run extraction script
         env:
           GOLEMIO_API_KEY: ${{ secrets.GOLEMIO_API_KEY }}
-        run: python extract_libraries.py
+        run: |
+          python extract_libraries.py > script_output.log 2>&1 || { cat script_output.log; exit 1; }
+          cat script_output.log
 
       - name: Check if CSV was created
         run: |
