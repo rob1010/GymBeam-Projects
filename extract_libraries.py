@@ -4,18 +4,18 @@ import requests
 import pandas as pd
 from datetime import datetime
 import pytz
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 API_KEY = os.getenv('GOLEMIO_API_KEY')
 if not API_KEY:
     print("Error: API key not set")
-    df = pd.DataFrame()
+    df = pd.DataFrame(columns=['ID knižnice', 'Názov knižnice', 'Ulica', 'PSČ', 'Mesto', 'Kraj', 'Krajina', 'Zemepisná šírka', 'Zemepisná dĺžka', 'Čas otvorenia'])
     df.to_csv('libraries.csv', index=False, encoding='utf-8')
-    print("Created empty libraries.csv due to missing API key")
+    print("Created empty libraries.csv with headers due to missing API key")
     exit(0)
 
 API_KEY = str(API_KEY).strip()
 print(f"API key length: {len(API_KEY)}")
-
 try:
     API_KEY.encode('ascii')
     print("API key contains only ASCII characters")
@@ -27,7 +27,7 @@ praha_tz = pytz.timezone('Europe/Prague')
 now = datetime.now(praha_tz)
 print(f"Aktuálny čas v Prahe: {now}")
 
-url = "https://api.golemio.cz/v2/libraries"
+url = "https://api.golemio.cz/v2/municipal-libraries"  # Update to correct endpoint
 headers = {
     "X-Access-Token": API_KEY,
     "Content-Type": "application/json",
@@ -35,8 +35,13 @@ headers = {
 }
 
 print(f"Making request to: {url}")
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def make_api_request():
+    return requests.get(url, headers=headers, timeout=30)
+
 try:
-    response = requests.get(url, headers=headers, timeout=30)
+    response = make_api_request()
     print(f"Response status code: {response.status_code}")
     
     if response.status_code == 200:
@@ -45,9 +50,9 @@ try:
         libraries = data.get('features', [])
         if not libraries:
             print("Warning: No libraries found in API response")
-            df = pd.DataFrame()
+            df = pd.DataFrame(columns=['ID knižnice', 'Názov knižnice', 'Ulica', 'PSČ', 'Mesto', 'Kraj', 'Krajina', 'Zemepisná šírka', 'Zemepisná dĺžka', 'Čas otvorenia'])
             df.to_csv('libraries.csv', index=False, encoding='utf-8')
-            print("Created empty libraries.csv")
+            print("Created empty libraries.csv with headers")
             exit(0)
         
         extracted_data = []
@@ -73,30 +78,30 @@ try:
         df = pd.DataFrame(extracted_data)
         df.to_csv('libraries.csv', index=False, encoding='utf-8')
         print(f"Saved {len(extracted_data)} records to libraries.csv")
-        
+    
     else:
         print(f"Error: Status code {response.status_code}")
-        print(f"Response text: {response.text[:500]}")
-        df = pd.DataFrame()
+        print(f"Full response text: {response.text}")
+        df = pd.DataFrame(columns=['ID knižnice', 'Názov knižnice', 'Ulica', 'PSČ', 'Mesto', 'Kraj', 'Krajina', 'Zemepisná šírka', 'Zemepisná dĺžka', 'Čas otvorenia'])
         df.to_csv('libraries.csv', index=False, encoding='utf-8')
-        print("Created empty libraries.csv due to API error")
+        print("Created empty libraries.csv with headers due to API error")
         exit(0)
 
 except requests.exceptions.RequestException as e:
     print(f"HTTP request error: {e}")
-    df = pd.DataFrame()
+    df = pd.DataFrame(columns=['ID knižnice', 'Názov knižnice', 'Ulica', 'PSČ', 'Mesto', 'Kraj', 'Krajina', 'Zemepisná šírka', 'Zemepisná dĺžka', 'Čas otvorenia'])
     df.to_csv('libraries.csv', index=False, encoding='utf-8')
-    print("Created empty libraries.csv due to HTTP error")
+    print("Created empty libraries.csv with headers due to HTTP error")
     exit(0)
 except json.JSONDecodeError:
     print("Error: Invalid JSON response from API")
-    df = pd.DataFrame()
+    df = pd.DataFrame(columns=['ID knižnice', 'Názov knižnice', 'Ulica', 'PSČ', 'Mesto', 'Kraj', 'Krajina', 'Zemepisná šírka', 'Zemepisná dĺžka', 'Čas otvorenia'])
     df.to_csv('libraries.csv', index=False, encoding='utf-8')
-    print("Created empty libraries.csv due to JSON error")
+    print("Created empty libraries.csv with headers due to JSON error")
     exit(0)
 except Exception as e:
     print(f"Unexpected error: {e}")
-    df = pd.DataFrame()
+    df = pd.DataFrame(columns=['ID knižnice', 'Názov knižnice', 'Ulica', 'PSČ', 'Mesto', 'Kraj', 'Krajina', 'Zemepisná šírka', 'Zemepisná dĺžka', 'Čas otvorenia'])
     df.to_csv('libraries.csv', index=False, encoding='utf-8')
-    print("Created empty libraries.csv due to unexpected error")
+    print("Created empty libraries.csv with headers due to unexpected error")
     exit(0)

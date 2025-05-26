@@ -2,8 +2,7 @@ name: Extract Libraries Data
 
 on:
   schedule:
-    - cron: '00 5 * * *'  # 21:50 UTC = 23:50 CEST
-    - cron: '00 6 * * *'  # 22:50 UTC = 23:50 CET
+    - cron: '00 5 * * *'  # 5:00 AM UTC = 7:00 AM CEST/CET
   workflow_dispatch:  # Manual trigger
 
 jobs:
@@ -23,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests pandas pytz
+          pip install requests pandas pytz tenacity
 
       - name: Run extraction script
         env:
@@ -37,8 +36,14 @@ jobs:
           if [ -f "libraries.csv" ]; then
             echo "libraries.csv was created successfully"
             ls -la libraries.csv
+            if [ -s "libraries.csv" ]; then
+              echo "libraries.csv contains data"
+            else
+              echo "libraries.csv is empty (contains only headers)"
+            fi
           else
-            echo "libraries.csv was NOT created - script may have failed"
+            echo "libraries.csv was NOT created - script failed"
+            cat script_output.log || echo "No script output available"
             exit 1
           fi
 
@@ -46,8 +51,6 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          
-          # Check if libraries.csv exists before trying to add it
           if [ -f "libraries.csv" ]; then
             git add libraries.csv
             if git diff --staged --quiet; then
