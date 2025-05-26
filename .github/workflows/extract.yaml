@@ -2,8 +2,8 @@ name: Extract Libraries Data
 
 on:
   schedule:
-    - cron: '58 21 * * *'  # 21:50 UTC = 23:50 CEST
-    - cron: '58 22 * * *'  # 22:50 UTC = 23:50 CET
+    - cron: '00 5 * * *'  # 21:50 UTC = 23:50 CEST
+    - cron: '00 6 * * *'  # 22:50 UTC = 23:50 CET
   workflow_dispatch:  # Manual trigger
 
 jobs:
@@ -30,14 +30,31 @@ jobs:
           GOLEMIO_API_KEY: ${{ secrets.GOLEMIO_API_KEY }}
         run: python extract_libraries.py
 
+      - name: Check if CSV was created
+        run: |
+          if [ -f "libraries.csv" ]; then
+            echo "libraries.csv was created successfully"
+            ls -la libraries.csv
+          else
+            echo "libraries.csv was NOT created - script may have failed"
+            exit 1
+          fi
+
       - name: Commit and push changes
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add libraries.csv
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
+          
+          # Check if libraries.csv exists before trying to add it
+          if [ -f "libraries.csv" ]; then
+            git add libraries.csv
+            if git diff --staged --quiet; then
+              echo "No changes to commit"
+            else
+              git commit -m "Update libraries data - $(date '+%Y-%m-%d %H:%M')"
+              git push
+            fi
           else
-            git commit -m "Update libraries data - $(date '+%Y-%m-%d %H:%M')"
-            git push
+            echo "libraries.csv does not exist, skipping commit"
+            exit 1
           fi
