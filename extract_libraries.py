@@ -27,7 +27,7 @@ praha_tz = pytz.timezone('Europe/Prague')
 now = datetime.now(praha_tz)
 print(f"Aktuálny čas v Prahe: {now}")
 
-url = "https://api.golemio.cz/v2/municipal-libraries"  # Update to correct endpoint
+url = "https://api.golemio.cz/v2/municipallibraries"  # Update to correct endpoint
 headers = {
     "X-Access-Token": API_KEY,
     "Content-Type": "application/json",
