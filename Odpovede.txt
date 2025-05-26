@@ -1,0 +1,112 @@
+Dodatočné otázky na diskusiu: 
+●  Aké kompromisy by ste spravili medzi normalizáciou a výkonnosťou? 
+●  Ako by ste riešili historické zmeny (napr. zmena ceny produktu, adresa zákazníka)? 
+●  Aké indexy by ste pridali na zlepšenie výkonnosti dotazov? 
+
+Normalizácia vs. výkonnosť: V operačnej databáze preferujem normalizáciu pre integritu dát, v analytickej denormalizáciu pre rýchlosť.
+Historické zmeny: Aktuálne údaje udržiavam v operačnej databáze, históriu zachytávam v analytickej databáze (napr. cez SCD Type 2 alebo faktové tabuľky).
+Indexy: Strategicky ich umiestňujem na primárne a cudzie kľúče, ako aj na často filtrované atribúty, s použitím bitmapových indexov pre analytické dimenzie.
+Tento návrh zaisťuje robustnú, škálovateľnú databázu optimalizovanú pre rôzne potreby.
+
+
+
+Predĺženie doby spracovania SQL transformácie je zvyčajne spôsobené rastúcim objemom dát, neefektívnymi dotazmi, chýbajúcimi indexami,
+nesprávnou konfiguráciou databázy alebo pomalými externými zdrojmi. Riešením je kombinácia analýzy dotazov, optimalizácie indexov, inkrementálneho spracovania 
+a úpravy konfigurácie databázy. Dôležité je postupovať systematicky – analyzovať, optimalizovať, testovať – a priebežne monitorovať výkonnosť, aby sa problém 
+v budúcnosti neopakoval. Tieto kroky by mali pomôcť vrátiť transformáciu na pôvodnú úroveň efektivity, prípadne ju ešte vylepšiť.
+
+1. Používanie hardcoded hodnôt v ETL procesoch pre biznis pravidlá
+Osvedčený postup: Nie.
+Negatívny výsledok: Hardcoded hodnoty sú ťažko udržiavateľné a flexibilné. Zmena biznis pravidiel si vyžaduje úpravu kódu, čo zvyšuje riziko chýb, nekonzistentného spracovania a náročnej údržby.
+Lepšie riešenie: Používať parametrizáciu alebo konfiguračné súbory, ktoré umožňujú jednoduchú úpravu pravidiel bez zásahu do kódu.
+Osobná skúsenosť: Videl som, ako hardcoded hodnoty spôsobili nesprávne výpočty v reporte, čo viedlo k strate dôvery v dáta. Prechod na konfiguračné súbory tento problém vyriešil.
+2. Neindexovanie stĺpcov, ktoré sú často dotazované vo veľkých tabuľkách
+Osvedčený postup: Nie.
+Negatívny výsledok: Pomalé dotazy, zvýšená záťaž na server a frustrácia používateľov z dlhých čakacích dôb.
+Lepšie riešenie: Identifikovať často používané stĺpce a pridať na ne indexy (napr. B-tree alebo bitmap) s ohľadom na špecifické potreby.
+Osobná skúsenosť: V jednom projekte som pridal indexy na kľúčové stĺpce, čím sa doba dotazu skrátila z minút na sekundy.
+3. Ukladanie logov a záloh na rovnaký server ako produkčná databáza
+Osvedčený postup: Nie.
+Negatívny výsledok: Pri zlyhaní servera hrozí strata logov aj záloh, čo sťažuje obnovu systému.
+Lepšie riešenie: Ukladať logy a zálohy na oddelené servery alebo do cloudu s geografickou redundanciou.
+Osobná skúsenosť: Prechod na ukladanie záloh do AWS S3 zlepšil bezpečnosť a dostupnosť dát v našom tíme.
+4. Používanie zdieľaných servisných účtov na pripojenie k databázam v ETL nástrojoch
+Osvedčený postup: Nie.
+Negatívny výsledok: Znižuje bezpečnosť a sledovateľnosť – je ťažké zistiť, kto vykonal akú akciu, a zvyšuje sa riziko zneužitia.
+Lepšie riešenie: Používať individuálne účty s minimálnymi privilégiami a auditovať prístupy.
+Osobná skúsenosť: Implementácia role-based access control (RBAC) výrazne zvýšila bezpečnosť a transparentnosť v projekte.
+5. Budovanie dátových kanálov bez implementácie mechanizmov na opakovanie alebo zotavenie pri zlyhaní
+Osvedčený postup: Nie.
+Negatívny výsledok: Zlyhanie procesu môže viesť k neúplným alebo chybným dátam a prerušeniu služieb.
+Lepšie riešenie: Implementovať retry mechanizmy, checkpointing a notifikácie pri zlyhaní.
+Osobná skúsenosť: Pridanie automatického opakovania pri sieťových chybách v projekte znížilo potrebu manuálnych zásahov.
+6. Povoľovanie priameho prístupu ku zdrojovým dátam všetkým členom tímu bez kontroly prístupu
+Osvedčený postup: Nie.
+Negatívny výsledok: Ohrozuje integritu a bezpečnosť dát – hrozí neoprávnená zmena, únik dát alebo chyby.
+Lepšie riešenie: Nastaviť striktné prístupové práva na základe rolí a auditovať prístupy.
+Osobná skúsenosť: Po zavedení least privilege prístupu sme zaznamenali menej dátových incidentov.
+7. Vynechanie validácie schémy pri načítavaní externých dát
+Osvedčený postup: Nie.
+Negatívny výsledok: Načítanie nekonzistentných alebo chybných dát, ktoré sa šíria do ďalších procesov.
+Lepšie riešenie: Implementovať validáciu schémy a dát pri načítavaní, napr. pomocou ETL nástrojov alebo skriptov.
+Osobná skúsenosť: Problémy s neplatnými dátami sme vyriešili pridaním validácie v ETL procese.
+8. Používanie zastaraných ETL procesov bez pravidelných revízií optimalizácie
+Osvedčený postup: Nie.
+Negatívny výsledok: Neefektívne a pomalé procesy, vyššie náklady a frustrácia používateľov.
+Lepšie riešenie: Pravidelne (napr. každých 6 mesiacov) revidovať a optimalizovať ETL procesy.
+Osobná skúsenosť: Optimalizácia starých ETL jobov skrátila dobu spracovania o 40%.
+9. Nepremazanie alebo neodstránenie zastaraných tabuliek a pohľadov z dátového skladu
+Osvedčený postup: Nie.
+Negatívny výsledok: Zvyšuje zmätok, spotrebu zdrojov a riziko použitia zastaraných dát.
+Lepšie riešenie: Pravidelne čistiť a archivovať zastarané objekty s jasnou politikou retencie.
+Osobná skúsenosť: Retention policy nám pomohla uvoľniť priestor a zjednodušiť schému.
+10. Nenastavenie upozornení na zlyhané úlohy alebo oneskorenia kanálov
+Osvedčený postup: Nie.
+Negatívny výsledok: Oneskorené zistenie problémov, dlhodobé výpadky a nespokojnosť používateľov.
+Lepšie riešenie: Nastaviť monitorovanie a alerty pre kritické úlohy, napr. pomocou Prometheus alebo cloudových služieb.
+Osobná skúsenosť: Po nastavení alertov sme skrátili reakčný čas na problémy z hodín na 5 minút.
+11. Ukladanie citlivých údajov bez šifrovania pri ukladaní alebo prenose
+Osvedčený postup: Nie.
+Negatívny výsledok: Riziko úniku dát, pokuty a strata dôvery zo strany používateľov.
+Lepšie riešenie: Šifrovať dáta pri ukladaní (napr. AES-256) a prenose (TLS).
+Osobná skúsenosť: Šifrovanie na úrovni databázy zlepšilo súlad s GDPR v jednom projekte.
+12. Ignorovanie obmedzení dátových typov pri vytváraní schém v dátovom sklade
+Osvedčený postup: Nie.
+Negatívny výsledok: Neplatné dáta, chyby pri spracovaní a vyššia spotreba úložiska.
+Lepšie riešenie: Definovať presné dátové typy a obmedzenia (napr. NOT NULL, CHECK constraints).
+Osobná skúsenosť: Správne dátové typy znížili veľkosť tabuliek o 20%.
+13. Povoľovanie kruhových závislostí medzi ETL úlohami
+Osvedčený postup: Nie.
+Negatívny výsledok: Komplikuje orchestráciu, môže spôsobiť deadlocky a nepredvídateľné správanie.
+Lepšie riešenie: Navrhnúť ETL úlohy ako DAG (directed acyclic graph) na predchádzanie cyklom.
+Osobná skúsenosť: Prechod na DAG v Apache Airflow vyriešil problémy so závislosťami.
+14. Vykonávanie transformácií priamo na produkčných databázach namiesto staging vrstiev
+Osvedčený postup: Nie.
+Negatívny výsledok: Riziko poškodenia produkčných dát a výpadkov služieb.
+Lepšie riešenie: Používať staging vrstvy na transformácie pred načítaním do produkcie.
+Osobná skúsenosť: Staging vrstva znížila riziko a zvýšila stabilitu systému.
+15. Výber dátového modelu (napr. hviezdica vs. snehová vločka) bez zohľadnenia použitia
+Osvedčený postup: Nie.
+Negatívny výsledok: Neefektívne dotazy, pomalé reporty a zložitá údržba.
+Lepšie riešenie: Vybrať model (napr. hviezdica pre jednoduché dotazy) na základe požiadaviek a objemu dát.
+Osobná skúsenosť: Prechod na hviezdicu zlepšil výkon reportov o 30%.
+16. Používanie VARCHAR(MAX) ako predvoleného dátového typu pre textové polia
+Osvedčený postup: Nie.
+Negatívny výsledok: Neefektívne využitie úložiska a pamäte, pomalšie dotazy.
+Lepšie riešenie: Používať vhodné dátové typy (napr. VARCHAR(n)) podľa maximálnej dĺžky dát.
+Osobná skúsenosť: Optimalizácia dátových typov znížila veľkosť databázy o 15%.
+17. Pridávanie všetkých stĺpcov zo zdrojového systému do dátového skladu bez ohľadu na ich relevantnosť
+Osvedčený postup: Nie.
+Negatívny výsledok: Zbytočný nárast objemu dát, vyššie náklady a zložitejšia údržba.
+Lepšie riešenie: Selektívne vyberať iba relevantné stĺpce podľa biznis potrieb.
+Osobná skúsenosť: Odstránenie nepotrebných stĺpcov ušetrilo 25% úložiska.
+18. Vynechanie partitioningu alebo clusteringu pre veľké faktové tabuľky
+Osvedčený postup: Nie.
+Negatívny výsledok: Pomalé dotazy na veľkých tabuľkách a frustrácia používateľov.
+Lepšie riešenie: Implementovať partitionovanie (napr. podľa dátumu) a clustering pre často používané stĺpce.
+Osobná skúsenosť: Partitionovanie podľa mesiacov skrátilo dobu dotazu o 50%.
+19. Vývoj a nasadenie zmien v pipeline bez verzovania alebo testovania
+Osvedčený postup: Nie.
+Negatívny výsledok: Chyby v produkcii, nefunkčné pipeline, prestoje a strata dát.
+Lepšie riešenie: Používať verziovanie (napr. Git), testovanie v staging prostredí a CI/CD.
+Osobná skúsenosť: CI/CD znížilo počet incidentov o 60%.

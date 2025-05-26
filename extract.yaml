@@ -1,0 +1,36 @@
+name: Extract Libraries Data
+
+on:
+  schedule:
+    - cron: '0 5 * * *'  # Pre letný čas (CEST, 7:00 = 5:00 UTC)
+    - cron: '0 6 * * *'  # Pre zimný čas (CET, 7:00 = 6:00 UTC)
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run extraction script
+        env:
+          GOLEMIO_API_KEY: ${{ secrets.GOLEMIO_API_KEY }}
+        run: python extract_libraries.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add libraries.csv
+          git commit -m "Update libraries data" || echo "No changes to commit"
+          git push
