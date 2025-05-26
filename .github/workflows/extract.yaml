@@ -2,8 +2,8 @@ name: Extract Libraries Data
 
 on:
   schedule:
-    - cron: '55 21 * * *'  # 21:50 UTC = 23:50 CEST
-    - cron: '55 22 * * *'  # 22:50 UTC = 23:50 CET
+    - cron: '57 21 * * *'  # 21:50 UTC = 23:50 CEST
+    - cron: '57 22 * * *'  # 22:50 UTC = 23:50 CET
   workflow_dispatch:  # Manual trigger
 
 jobs:
