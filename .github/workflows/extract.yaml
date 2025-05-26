@@ -2,25 +2,28 @@ name: Extract Libraries Data
 
 on:
   schedule:
-    - cron: '45 21 * * *'  # For summer time (CEST, 22:30 = 20:30 UTC)
-    - cron: '45 22 * * *'  # For winter time (CET, 22:30 = 21:30 UTC)
+    - cron: '50 21 * * *'  # 21:50 UTC = 23:50 CEST
+    - cron: '50 22 * * *'  # 22:50 UTC = 23:50 CET
+  workflow_dispatch:  # Manual trigger
 
 jobs:
   extract:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install requests pandas pytz
 
       - name: Run extraction script
         env:
@@ -32,5 +35,9 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add libraries.csv
-          git commit -m "Update libraries data" || echo "No changes to commit"
-          git push
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Update libraries data - $(date '+%Y-%m-%d %H:%M')"
+            git push
+          fi
