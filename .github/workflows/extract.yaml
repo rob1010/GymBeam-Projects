@@ -2,8 +2,8 @@ name: Extract Libraries Data
 
 on:
   schedule:
-    - cron: '40 21 * * *'  # For summer time (CEST, 22:30 = 20:30 UTC)
-    - cron: '40 22 * * *'  # For winter time (CET, 22:30 = 21:30 UTC)
+    - cron: '45 21 * * *'  # For summer time (CEST, 22:30 = 20:30 UTC)
+    - cron: '45 22 * * *'  # For winter time (CET, 22:30 = 21:30 UTC)
 
 jobs:
   extract:
